@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 split-folders = "*"
 torchvision = "*"
+tqdm = "*"
 
 [dev-packages]
 
