@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 
 
@@ -47,6 +48,4 @@ class TinyVGG(nn.Module):
         x = self.classifier(x)
         # print(x.shape)
         return x
-        # return self.classifier(self.conv_block_2(self.conv_block_1(x))) # <- leverage the benefits of operator fusion
-
 
