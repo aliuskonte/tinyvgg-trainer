@@ -14,7 +14,7 @@ torch.manual_seed(42)
 torch.cuda.manual_seed(42)
 
 # Set number of epochs
-NUM_EPOCHS = 25
+NUM_EPOCHS = 2
 
 # Recreate an instance of TinyVGG
 model = TinyVGG(

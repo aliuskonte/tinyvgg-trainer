@@ -16,7 +16,7 @@ data_transform = transforms.Compose([
 """
 Превращает данные нашего изображения в набор данных, который можно использовать с PyTorch
 """
-path_split_data = Path("data/split")
+path_split_data = Path("src/data/split")
 path_train_data = path_split_data / "train"
 path_test_data = path_split_data / "test"
 path_val_data = path_split_data / "val"
