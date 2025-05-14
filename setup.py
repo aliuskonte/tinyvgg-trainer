@@ -1,6 +1,6 @@
 # setup.py
 # ------------------------------------------------------------------------------
-# Установка пакета tinyvgg_trainer:
+# Установка пакета src:
 #   pip install -e .
 # После этого будут доступны команды:
 #   train-tinyvgg     — обучение модели
@@ -14,7 +14,7 @@ here = Path(__file__).parent
 long_description = (here / "README.md").read_text(encoding="utf‑8") if (here / "README.md").exists() else ""
 
 setup(
-    name="tinyvgg_trainer",
+    name="src",
     version="0.1.0",
     description="Небольшой пакет для обучения TinyVGG (train / val / test) + сплит датасета",
     long_description=long_description,
@@ -32,8 +32,8 @@ setup(
     #   • src/split_dataset.py
     #   • src/training_loop.py
     # -------------------------------------------------------------------------
-    package_dir={"": "src"},
-    packages=find_packages("src"),
+    package_dir={"": "src"}, # говорит, что все пакеты лежат внутри src/.
+    packages=find_packages("src"), # найдёт tinyvgg_trainer и его подпакеты
     py_modules=[
         "cli",
         "prepare_dataloaders",
@@ -48,8 +48,8 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "train-tinyvgg=cli:main",
-            "split-dataset=split_dataset:main",
+            "train-tinyvgg=tinyvgg_trainer.cli:main",
+            "split-dataset=tinyvgg_trainer.split_dataset:main",
         ]
     },
     classifiers=[

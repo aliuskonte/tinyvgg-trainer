@@ -5,9 +5,9 @@ import torch
 from torch import nn
 from timeit import default_timer as timer
 
-from src.models.tiny_vgg import TinyVGG
-from src.prepare_dataloaders import get_data_transform, load_data, create_dataloaders
-from src.training_loop import train
+from tinyvgg_trainer.models.tiny_vgg import TinyVGG
+from tinyvgg_trainer.prepare_dataloaders import get_data_transform, load_data, create_dataloaders
+from tinyvgg_trainer.training_loop import train
 
 
 def main(epochs: int, learning_rate: float, seed: int):

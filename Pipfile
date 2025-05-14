@@ -8,6 +8,7 @@ split_folders = "*"
 torchvision = "*"
 tqdm = "*"
 tinyvgg-trainer = {file = ".", editable = true}
+src = {file = ".", editable = true}
 
 [dev-packages]
 
