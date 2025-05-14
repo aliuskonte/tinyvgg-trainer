@@ -31,9 +31,11 @@ def main(epochs: int, learning_rate: float, seed: int):
     # Запускаем таймер
     start_time = timer()
 
-    # Папка для чекпоинтов
-    save_path = Path("checkpoints") / f"tinyvgg_epochs_{epochs}_checkpoint.pt"
-    save_path.parent.mkdir(parents=True, exist_ok=True)
+    # Создаем пути для чекпоинтов и метрик
+    ckpt_path = Path("checkpoints") / f"tinyvgg_best.pt"
+    ckpt_path.parent.mkdir(parents=True, exist_ok=True)
+    metrics_path = Path("metrics") / f"tinyvgg_epoch{epochs}.pt"
+    metrics_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Обучаем модель
     results = train(
@@ -44,7 +46,7 @@ def main(epochs: int, learning_rate: float, seed: int):
         optimizer=optimizer,
         loss_fn=loss_fn,
         epochs=epochs,
-        save_path=f"checkpoints/tinyvgg_epochs_{epochs}_checkpoint.pt"
+        save_path=str(ckpt_path)
     )
 
     # Останавливаем таймер
@@ -52,9 +54,7 @@ def main(epochs: int, learning_rate: float, seed: int):
     print(f"Общее время обучения: {end_time - start_time:.3f} секунд")
 
     # Сохраняем словарь метрик
-    save_path = Path("metrics") / f"tinyvgg_epoch{epochs}.pt"
-    save_path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(results, f"metrics/tinyvgg_epoch_{epochs}_results.pt")
+    torch.save(results, metrics_path)
 
     return results
 

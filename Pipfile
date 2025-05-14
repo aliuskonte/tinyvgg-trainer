@@ -4,9 +4,10 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-split-folders = "*"
+split_folders = "*"
 torchvision = "*"
 tqdm = "*"
+tinyvgg-trainer = {file = ".", editable = true}
 
 [dev-packages]
 

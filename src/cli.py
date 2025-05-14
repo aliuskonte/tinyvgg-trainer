@@ -1,0 +1,107 @@
+"""
+cli.py — единая точка входа для обучения TinyVGG
+Запуск из терминала:
+    python -m src.cli --epochs 5 --lr 0.0005
+или после установки пакета:
+    train-tinyvgg --epochs 5
+"""
+
+import argparse
+from pathlib import Path
+from timeit import default_timer as timer
+
+import torch
+from torch import nn
+
+from src.models.tiny_vgg import TinyVGG
+from src.prepare_dataloaders import (
+    get_data_transform,
+    load_data,
+    create_dataloaders,
+)
+from src.training_loop import train
+
+
+def main(epochs: int, lr: float, seed: int, img_size: int) -> None:
+    """Запускает полный цикл train / val / test."""
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # ── Воспроизводимость ────────────────────────────────────────────────────
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+
+    # ── Данные ───────────────────────────────────────────────────────────────
+    transform = get_data_transform((img_size, img_size))
+    train_data, val_data, test_data = load_data(transform=transform)
+    train_loader, val_loader, test_loader = create_dataloaders(
+        train_data, val_data, test_data
+    )
+
+    # ── Модель, лосс, оптимизатор ───────────────────────────────────────────
+    model = TinyVGG(
+        input_shape=3,
+        hidden_units=10,
+        output_shape=len(train_data.classes),
+    ).to(device)
+
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    # ── Пути сохранения ─────────────────────────────────────────────────────
+    ckpt_dir = Path("checkpoints")
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    ckpt_path = ckpt_dir / "tinyvgg_best.pt"
+
+    metrics_dir = Path("metrics")
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    metrics_path = metrics_dir / f"tinyvgg_epoch{epochs}_results.pt"
+
+    # ── Обучение ────────────────────────────────────────────────────────────
+    start = timer()
+    results = train(
+        model=model,
+        train_dataloader=train_loader,
+        val_dataloader=val_loader,
+        test_dataloader=test_loader,
+        optimizer=optimizer,
+        loss_fn=loss_fn,
+        epochs=epochs,
+        save_path=str(ckpt_path),
+    )
+    duration = timer() - start
+    print(f"Обучение завершено за {duration:.2f} с")
+
+    # ── Сохраняем метрики ───────────────────────────────────────────────────
+    torch.save(results, metrics_path)
+    print(f"Метрики сохранены в: {metrics_path}")
+    print(f"Лучший чекпоинт сохранён в: {ckpt_path}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Скрипт для обучения TinyVGG (train / val / test)"
+    )
+    parser.add_argument("--epochs", type=int, default=10, help="Кол-во эпох")
+    parser.add_argument(
+        "--lr",
+        "--learning-rate",
+        dest="lr",
+        type=float,
+        default=1e-3,
+        help="Learning rate",
+    )
+    parser.add_argument("--seed", type=int, default=42, help="Случайное зерно")
+    parser.add_argument(
+        "--img-size",
+        type=int,
+        default=64,
+        help="Размер стороны входного изображения",
+    )
+    args = parser.parse_args()
+
+    main(
+        epochs=args.epochs,
+        lr=args.lr,
+        seed=args.seed,
+        img_size=args.img_size,
+    )
