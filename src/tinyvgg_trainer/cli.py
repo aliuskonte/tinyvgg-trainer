@@ -1,10 +1,11 @@
+#!/usr/bin/env python3
 """
 cli.py — единая точка входа для обучения TinyVGG
 
 Запуск из терминала:
-    python -m tinyvgg_trainer.cli --epochs 5 --lr 0.0005
+    python -m tinyvgg_trainer.cli --epochs 5 --lr 0.0005 --split-dir /path/to/split
 или после установки пакета:
-    train-tinyvgg --epochs 5
+    train-tinyvgg --epochs 5 --split-dir /path/to/split
 """
 
 import argparse
@@ -23,7 +24,13 @@ from tinyvgg_trainer.prepare_dataloaders import (
 from tinyvgg_trainer.training_loop import train
 
 
-def run(epochs: int, lr: float, seed: int, img_size: int) -> None:
+def run(
+    epochs: int,
+    lr: float,
+    seed: int,
+    img_size: int,
+    split_dir: str | None = None,
+) -> None:
     """Запускает полный цикл train / val / test с заданными параметрами."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -33,12 +40,15 @@ def run(epochs: int, lr: float, seed: int, img_size: int) -> None:
 
     # Подготовка данных
     transform = get_data_transform((img_size, img_size))
-    train_data, val_data, test_data = load_data(transform=transform)
+    train_data, val_data, test_data = load_data(
+        split_dir=split_dir,
+        transform=transform,
+    )
     train_loader, val_loader, test_loader = create_dataloaders(
         train_data, val_data, test_data
     )
 
-    # Создание модели, функции потерь и оптимизатора
+    # Модель, лосс и оптимизатор
     model = TinyVGG(
         input_shape=3,
         hidden_units=10,
@@ -82,9 +92,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Скрипт для обучения TinyVGG (train / val / test)"
     )
-    parser.add_argument(
-        "--epochs", type=int, default=2, help="Кол-во эпох"
-    )
+    parser.add_argument("--epochs", type=int, default=2, help="Кол-во эпох")
     parser.add_argument(
         "--lr", "--learning-rate",
         dest="lr",
@@ -92,12 +100,14 @@ def main():
         default=0.001,
         help="Learning rate",
     )
-    parser.add_argument(
-        "--seed", type=int, default=42, help="Случайное зерно"
-    )
+    parser.add_argument("--seed", type=int, default=42, help="Случайное зерно")
     parser.add_argument(
         "--img-size", type=int, default=64,
         help="Размер стороны входного изображения",
+    )
+    parser.add_argument(
+        "--split-dir", type=str, default=None,
+        help="Путь к папке data/split (train/val/test)",
     )
     args = parser.parse_args()
 
@@ -106,6 +116,7 @@ def main():
         lr=args.lr,
         seed=args.seed,
         img_size=args.img_size,
+        split_dir=args.split_dir,
     )
 
 

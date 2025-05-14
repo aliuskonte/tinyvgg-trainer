@@ -15,14 +15,14 @@ def get_data_transform(size: tuple = (64, 64)) -> transforms.Compose:
     ])
 
 
-def load_data(split_dir: str = "src/tinyvgg_trainer/data/split", transform=None):
+def load_data(split_dir, transform=None):
     """
     Загружает датасеты train, val и test из указанной папки split_dir.
     :return: train_data, val_data, test_data
     """
     data_transform = transform if transform is not None else get_data_transform()
 
-    path_split_data = Path(split_dir)
+    path_split_data = Path(split_dir) if split_dir else Path("src/tinyvgg_trainer/data/split")
     path_train_ds = path_split_data / "train"
     path_val_ds = path_split_data / "val"
     path_test_ds = path_split_data / "test"

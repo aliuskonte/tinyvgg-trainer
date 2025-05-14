@@ -5,7 +5,6 @@ split_dataset.py — CLI для разбиения датасета на train/v
 По умолчанию берёт папку data/raw.
 """
 import argparse
-import os
 from pathlib import Path
 
 import splitfolders
