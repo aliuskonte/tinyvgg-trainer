@@ -1,6 +1,15 @@
+import sys
 from pathlib import Path
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader
+import multiprocessing
+import logging
+
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s"
+)
 
 
 def get_data_transform(size: tuple = (64, 64)) -> transforms.Compose:
@@ -43,13 +52,25 @@ def load_data(split_dir, transform=None):
     return train_data, val_data, test_data
 
 
-def create_dataloaders(train_data, val_data, test_data,
-                       batch_size: int = 32,
-                       num_workers: int = 1):
+def create_dataloaders(
+        train_data,
+        val_data,
+        test_data,
+        batch_size: int = 32,
+        num_workers: int | None = None,
+        pin_memory: bool = True
+):
     """
     Создаёт DataLoader'ы для train, val и test.
     :return: train_dataloader, val_dataloader, test_dataloader
     """
+
+    if num_workers is None:
+        # оставляем одно ядро «свободным»
+        num_workers = max(1, multiprocessing.cpu_count() - 1)
+
+    logging.info(f"Number of workers: {num_workers}")
+
     train_dataloader = DataLoader(
         dataset=train_data,
         batch_size=batch_size,

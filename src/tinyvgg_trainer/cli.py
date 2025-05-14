@@ -9,6 +9,8 @@ cli.py — единая точка входа для обучения TinyVGG
 """
 
 import argparse
+import logging
+import sys
 from pathlib import Path
 from timeit import default_timer as timer
 
@@ -23,6 +25,12 @@ from tinyvgg_trainer.prepare_dataloaders import (
 )
 from tinyvgg_trainer.training_loop import train
 
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s"
+)
+
 
 def run(
     epochs: int,
@@ -33,6 +41,7 @@ def run(
 ) -> None:
     """Запускает полный цикл train / val / test с заданными параметрами."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logging.info(f"Device: {device}")
 
     # Воспроизводимость
     torch.manual_seed(seed)
