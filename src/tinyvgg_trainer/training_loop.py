@@ -64,7 +64,6 @@ def train(model: nn.Module,
     """
     Тренировочный цикл с автоматическим логированием в ClearML.
     """
-    # Инициализация логгера ClearML
     task = Task.current_task()
     logger = task.get_logger()
 
@@ -76,12 +75,12 @@ def train(model: nn.Module,
 
     best_val = float("inf")
 
-    for epoch in tqdm(range(epochs), desc="Epoch"):
-        # 1) Train
+    for epoch in tqdm(range(epochs), desc="Эпоха"):
+        # 1) Обучение
         train_loss, train_acc = train_step(model, train_dataloader, loss_fn, optimizer)
-        # 2) Validate
+        # 2) Валидация
         val_loss, val_acc = eval_step(model, val_dataloader, loss_fn)
-        # 3) Test
+        # 3) Тестирование
         test_loss, test_acc = eval_step(model, test_dataloader, loss_fn)
 
         # 4) Логирование метрик в ClearML
@@ -92,21 +91,21 @@ def train(model: nn.Module,
         logger.report_scalar("Loss", "test",  iteration=epoch, value=test_loss)
         logger.report_scalar("Accuracy", "test",  iteration=epoch, value=test_acc)
 
-        # 5) Сохраняем лучший чекпоинт по val_loss
+        # 5) Сохраняем лучший чекпоинт по наименьшим потерям на валидации
         if val_loss < best_val:
             best_val = val_loss
             torch.save(model.state_dict(), save_path)
-            logger.report_text(f"Best model saved at epoch {epoch+1} with val_loss={val_loss:.4f}")
+            logger.report_text(f"Лучшая модель сохранена на эпохе {epoch+1} (val_loss={val_loss:.4f})")
 
         # 6) Вывод в консоль
         print(
-            f"Epoch {epoch+1}/{epochs} — "
+            f"Эпоха {epoch+1}/{epochs} — "
             f"Train: loss={train_loss:.4f}, acc={train_acc:.4f} | "
-            f"Val:   loss={val_loss:.4f},   acc={val_acc:.4f}   | "
-            f"Test:  loss={test_loss:.4f},  acc={test_acc:.4f}"
+            f"Val:   loss={val_loss:.4f}, acc={val_acc:.4f} | "
+            f"Test:  loss={test_loss:.4f}, acc={test_acc:.4f}"
         )
 
-        # 7) Хранение в results
+        # 7) Сохранение в словарь результатов
         results["train_loss"].append(train_loss)
         results["train_acc"].append(train_acc)
         results["val_loss"].append(val_loss)
