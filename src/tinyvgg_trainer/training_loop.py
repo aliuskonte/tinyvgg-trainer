@@ -1,6 +1,7 @@
 import torch
 from torch import nn, utils, optim
 from tqdm.auto import tqdm
+from clearml import Task
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -34,10 +35,6 @@ def eval_step(model: nn.Module,
               dataloader: utils.data.DataLoader,
               loss_fn: nn.Module,
               device=DEVICE):
-    """
-    Функция для оценки модели на данных. Тестирование и валидация
-    """
-
     model.eval()
     loss_sum, acc_sum = 0.0, 0.0
 
@@ -64,6 +61,13 @@ def train(model: nn.Module,
           epochs: int = 5,
           save_path: str = 'saved_weights.pt'
           ):
+    """
+    Тренировочный цикл с автоматическим логированием в ClearML.
+    """
+    # Инициализация логгера ClearML
+    task = Task.current_task()
+    logger = task.get_logger()
+
     results = {
         "train_loss": [], "train_acc": [],
         "val_loss":   [], "val_acc":   [],
@@ -73,16 +77,28 @@ def train(model: nn.Module,
     best_val = float("inf")
 
     for epoch in tqdm(range(epochs), desc="Epoch"):
+        # 1) Train
         train_loss, train_acc = train_step(model, train_dataloader, loss_fn, optimizer)
-        val_loss, val_acc = eval_step(model, val_dataloader,   loss_fn)
-        test_loss, test_acc = eval_step(model, test_dataloader,  loss_fn)
+        # 2) Validate
+        val_loss, val_acc = eval_step(model, val_dataloader, loss_fn)
+        # 3) Test
+        test_loss, test_acc = eval_step(model, test_dataloader, loss_fn)
 
-        # Save best model only if val_loss improved
+        # 4) Логирование метрик в ClearML
+        logger.report_scalar("Loss", "train", iteration=epoch, value=train_loss)
+        logger.report_scalar("Accuracy", "train", iteration=epoch, value=train_acc)
+        logger.report_scalar("Loss", "val",   iteration=epoch, value=val_loss)
+        logger.report_scalar("Accuracy", "val",   iteration=epoch, value=val_acc)
+        logger.report_scalar("Loss", "test",  iteration=epoch, value=test_loss)
+        logger.report_scalar("Accuracy", "test",  iteration=epoch, value=test_acc)
+
+        # 5) Сохраняем лучший чекпоинт по val_loss
         if val_loss < best_val:
             best_val = val_loss
             torch.save(model.state_dict(), save_path)
+            logger.report_text(f"Best model saved at epoch {epoch+1} with val_loss={val_loss:.4f}")
 
-        # 4) Log to console
+        # 6) Вывод в консоль
         print(
             f"Epoch {epoch+1}/{epochs} — "
             f"Train: loss={train_loss:.4f}, acc={train_acc:.4f} | "
@@ -90,7 +106,7 @@ def train(model: nn.Module,
             f"Test:  loss={test_loss:.4f},  acc={test_acc:.4f}"
         )
 
-        # 5) Store metrics
+        # 7) Хранение в results
         results["train_loss"].append(train_loss)
         results["train_acc"].append(train_acc)
         results["val_loss"].append(val_loss)
