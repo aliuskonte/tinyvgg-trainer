@@ -61,7 +61,8 @@ def train(model: nn.Module,
           epochs: int = 5,
           save_path: str = 'saved_weights.pt'
           ):
-    """Тренировочный цикл с логированием в ClearML. Тестовый набор оценивается один раз — после обучения."""
+
+    """Тренировочный цикл с логированием в ClearML"""
 
     task = Task.current_task()
     logger = task.get_logger()
