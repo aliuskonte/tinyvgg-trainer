@@ -15,7 +15,7 @@ def get_data_transform(size: tuple = (64, 64)) -> transforms.Compose:
     ])
 
 
-def load_data(split_dir: str = "src/data/split", transform=None):
+def load_data(split_dir: str = "src/tinyvgg_trainer/data/split", transform=None):
     """
     Загружает датасеты train, val и test из указанной папки split_dir.
     :return: train_data, val_data, test_data

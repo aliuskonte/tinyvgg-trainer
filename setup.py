@@ -14,7 +14,7 @@ here = Path(__file__).parent
 long_description = (here / "README.md").read_text(encoding="utf‑8") if (here / "README.md").exists() else ""
 
 setup(
-    name="src",
+    name="tinyvgg-trainer",
     version="0.1.0",
     description="Небольшой пакет для обучения TinyVGG (train / val / test) + сплит датасета",
     long_description=long_description,
