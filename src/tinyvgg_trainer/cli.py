@@ -18,6 +18,7 @@ import torch
 from torch import nn
 from clearml import Task
 
+from tinyvgg_trainer.config import CLEARML
 from tinyvgg_trainer.models.tiny_vgg import TinyVGG
 from tinyvgg_trainer.prepare_dataloaders import (
     get_data_transform,
@@ -41,13 +42,23 @@ def run(
     split_dir: str | None = None,
 ) -> None:
     """Запускает полный цикл train / val / test с ClearML трекингом."""
-    # Инициализируем задачу ClearML
+    # Настройка учётных данных ClearML из config
+    Task.set_credentials(
+        api_host=CLEARML["api_host"],
+        web_host=CLEARML["web_host"],
+        files_host=CLEARML["files_host"],
+        key=CLEARML["api_access_key"],
+        secret=CLEARML["api_secret_key"],
+    )
+    # Инициализация задачи
     task = Task.init(
         project_name="TinyVGG-Trainer",
         task_name=f"Train_img{img_size}_lr{lr}_ep{epochs}",
         task_type=Task.TaskTypes.training,
+        reuse_last_task_id=False,
+        auto_connect_arg_parser=True,
     )
-    # Логируем гиперпараметры
+    # Логи гиперпараметров
     task.connect({
         "epochs": epochs,
         "learning_rate": lr,
@@ -106,12 +117,10 @@ def run(
     duration = timer() - start
     logging.info(f"Обучение завершено за {duration:.2f} с")
 
-    # Сохранение метрик
+    # Сохранение метрик и лог артефактов ClearML
     torch.save(results, metrics_path)
     logging.info(f"Метрики сохранены в: {metrics_path}")
-    logging.info(f"Лучший чекпоинт сохранён в: {ckpt_path}")
-
-    # Логируем артефакты в ClearML
+    logging.info(f"Чекпоинт сохранён в: {ckpt_path}")
     task.upload_artifact(name="best_model", artifact_object=str(ckpt_path))
     task.upload_artifact(name="metrics", artifact_object=str(metrics_path))
 
