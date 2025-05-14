@@ -2,13 +2,14 @@ import torch
 from torch import nn, utils, optim
 from tqdm.auto import tqdm
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def train_step(model: nn.Module,
                dataloader: utils.data.DataLoader,
                loss_fn: nn.Module,
-               optimizer: optim.Optimizer):
+               optimizer: optim.Optimizer,
+               device=DEVICE):
     model.train()
     train_loss, train_acc = 0.0, 0.0
 
@@ -16,7 +17,7 @@ def train_step(model: nn.Module,
         X, y = X.to(device), y.to(device)
         y_pred = model(X)
         loss = loss_fn(y_pred, y)
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
 
@@ -31,7 +32,8 @@ def train_step(model: nn.Module,
 
 def eval_step(model: nn.Module,
               dataloader: utils.data.DataLoader,
-              loss_fn: nn.Module):
+              loss_fn: nn.Module,
+              device=DEVICE):
     """
     Функция для оценки модели на данных. Тестирование и валидация
     """
@@ -60,20 +62,25 @@ def train(model: nn.Module,
           optimizer: optim.Optimizer,
           loss_fn: nn.Module = nn.CrossEntropyLoss(),
           epochs: int = 5,
-          save_path: str = 'saved_weights.pt'):
+          save_path: str = 'saved_weights.pt'
+          ):
     results = {
         "train_loss": [], "train_acc": [],
         "val_loss":   [], "val_acc":   [],
         "test_loss":  [], "test_acc":  []
     }
 
+    best_val = float("inf")
+
     for epoch in tqdm(range(epochs), desc="Epoch"):
-        # 1) Train
         train_loss, train_acc = train_step(model, train_dataloader, loss_fn, optimizer)
-        # 2) Validate
         val_loss, val_acc = eval_step(model, val_dataloader,   loss_fn)
-        # 3) Test
         test_loss, test_acc = eval_step(model, test_dataloader,  loss_fn)
+
+        # Save best model only if val_loss improved
+        if val_loss < best_val:
+            best_val = val_loss
+            torch.save(model.state_dict(), save_path)
 
         # 4) Log to console
         print(
@@ -90,8 +97,5 @@ def train(model: nn.Module,
         results["val_acc"].append(val_acc)
         results["test_loss"].append(test_loss)
         results["test_acc"].append(test_acc)
-
-        # 6) Save checkpoint
-        torch.save(model.state_dict(), save_path)
 
     return results
