@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-cli.py — единая точка входа для обучения TinyVGG
+cli.py — единая точка входа для обучения TinyVGG с ClearML интеграцией
 
 Запуск из терминала:
     python -m tinyvgg_trainer.cli --epochs 5 --lr 0.0005 --split-dir /path/to/split
@@ -16,6 +16,7 @@ from timeit import default_timer as timer
 
 import torch
 from torch import nn
+from clearml import Task
 
 from tinyvgg_trainer.models.tiny_vgg import TinyVGG
 from tinyvgg_trainer.prepare_dataloaders import (
@@ -39,7 +40,22 @@ def run(
     img_size: int,
     split_dir: str | None = None,
 ) -> None:
-    """Запускает полный цикл train / val / test с заданными параметрами."""
+    """Запускает полный цикл train / val / test с ClearML трекингом."""
+    # Инициализируем задачу ClearML
+    task = Task.init(
+        project_name="TinyVGG-Trainer",
+        task_name=f"Train_img{img_size}_lr{lr}_ep{epochs}",
+        task_type=Task.TaskTypes.training,
+    )
+    # Логируем гиперпараметры
+    task.connect({
+        "epochs": epochs,
+        "learning_rate": lr,
+        "seed": seed,
+        "img_size": img_size,
+        "split_dir": split_dir or 'data/split',
+    })
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logging.info(f"Device: {device}")
 
@@ -88,12 +104,16 @@ def run(
         save_path=str(ckpt_path),
     )
     duration = timer() - start
-    print(f"Обучение завершено за {duration:.2f} с")
+    logging.info(f"Обучение завершено за {duration:.2f} с")
 
     # Сохранение метрик
     torch.save(results, metrics_path)
-    print(f"Метрики сохранены в: {metrics_path}")
-    print(f"Лучший чекпоинт сохранён в: {ckpt_path}")
+    logging.info(f"Метрики сохранены в: {metrics_path}")
+    logging.info(f"Лучший чекпоинт сохранён в: {ckpt_path}")
+
+    # Логируем артефакты в ClearML
+    task.upload_artifact(name="best_model", artifact_object=str(ckpt_path))
+    task.upload_artifact(name="metrics", artifact_object=str(metrics_path))
 
 
 def main():

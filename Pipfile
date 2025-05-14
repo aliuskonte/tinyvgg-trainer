@@ -7,6 +7,8 @@ name = "pypi"
 split_folders = "*"
 torchvision = "*"
 tqdm = "*"
+clearml = "*"
+python-dotenv = "*"
 src = {file = ".", editable = true}
 tinyvgg-trainer = {file = ".", editable = true}
 
