@@ -61,16 +61,15 @@ def train(model: nn.Module,
           epochs: int = 5,
           save_path: str = 'saved_weights.pt'
           ):
-    """
-    Тренировочный цикл с автоматическим логированием в ClearML.
-    """
+    """Тренировочный цикл с логированием в ClearML. Тестовый набор оценивается один раз — после обучения."""
+
     task = Task.current_task()
     logger = task.get_logger()
 
     results = {
         "train_loss": [], "train_acc": [],
         "val_loss":   [], "val_acc":   [],
-        "test_loss":  [], "test_acc":  []
+        "test_loss":  None, "test_acc": None
     }
 
     best_val = float("inf")
@@ -80,37 +79,39 @@ def train(model: nn.Module,
         train_loss, train_acc = train_step(model, train_dataloader, loss_fn, optimizer)
         # 2) Валидация
         val_loss, val_acc = eval_step(model, val_dataloader, loss_fn)
-        # 3) Тестирование
-        test_loss, test_acc = eval_step(model, test_dataloader, loss_fn)
 
         # 4) Логирование метрик в ClearML
         logger.report_scalar("Loss", "train", iteration=epoch, value=train_loss)
         logger.report_scalar("Accuracy", "train", iteration=epoch, value=train_acc)
         logger.report_scalar("Loss", "val",   iteration=epoch, value=val_loss)
         logger.report_scalar("Accuracy", "val",   iteration=epoch, value=val_acc)
-        logger.report_scalar("Loss", "test",  iteration=epoch, value=test_loss)
-        logger.report_scalar("Accuracy", "test",  iteration=epoch, value=test_acc)
 
-        # 5) Сохраняем лучший чекпоинт по наименьшим потерям на валидации
+        # 4) Сохраняем лучшую модель по val_loss
         if val_loss < best_val:
             best_val = val_loss
             torch.save(model.state_dict(), save_path)
             logger.report_text(f"Лучшая модель сохранена на эпохе {epoch+1} (val_loss={val_loss:.4f})")
 
-        # 6) Вывод в консоль
+        # 5) Вывод в консоль
         print(
-            f"Эпоха {epoch+1}/{epochs} — "
+            f"Эпоха {epoch + 1}/{epochs} — "
             f"Train: loss={train_loss:.4f}, acc={train_acc:.4f} | "
             f"Val:   loss={val_loss:.4f}, acc={val_acc:.4f} | "
-            f"Test:  loss={test_loss:.4f}, acc={test_acc:.4f}"
         )
 
-        # 7) Сохранение в словарь результатов
+        # 6) Сохраняем метрики в словарь результатов
         results["train_loss"].append(train_loss)
         results["train_acc"].append(train_acc)
         results["val_loss"].append(val_loss)
         results["val_acc"].append(val_acc)
-        results["test_loss"].append(test_loss)
-        results["test_acc"].append(test_acc)
+
+    # === Тестирование после обучения ===
+    test_loss, test_acc = eval_step(model, test_dataloader, loss_fn)
+    logger.report_scalar("Loss",   "test", iteration=epochs, value=test_loss)
+    logger.report_scalar("Accuracy", "test", iteration=epochs, value=test_acc)
+    logger.report_text(f"Финальный тест — loss={test_loss:.4f}, acc={test_acc:.4f}")
+
+    results["test_loss"] = test_loss
+    results["test_acc"]  = test_acc
 
     return results
