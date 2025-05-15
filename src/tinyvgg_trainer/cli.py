@@ -32,6 +32,12 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s"
 )
 
+DEVICE = (
+    torch.device("cuda") if torch.cuda.is_available() else
+    torch.device("mps") if torch.backends.mps.is_available() else
+    torch.device("cpu"))
+logging.info(f"Device: {DEVICE}")
+
 
 def run(
     epochs: int,
@@ -39,6 +45,7 @@ def run(
     seed: int,
     img_size: int,
     batch_size: int,
+    device: torch.device,
     split_dir: str | None = None,
 ) -> None:
     """Запускает полный цикл train / val / test с ClearML трекингом."""
@@ -68,12 +75,10 @@ def run(
         "split_dir": split_dir or 'data/split',
     })
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logging.info(f"Device: {device}")
-
     # Воспроизводимость
     torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
+    if device.type == "cuda":
+        torch.cuda.manual_seed(seed)
 
     # Подготовка данных
     transform = get_data_transform((img_size, img_size))
@@ -82,7 +87,11 @@ def run(
         transform=transform,
     )
     train_loader, val_loader, test_loader = create_dataloaders(
-        train_data, val_data, test_data
+        train_data,
+        val_data,
+        test_data,
+        batch_size,
+        pin_memory=(device.type == "cuda")
     )
 
     # Модель, лосс и оптимизатор
@@ -160,6 +169,7 @@ def main():
         seed=args.seed,
         img_size=args.img_size,
         batch_size=args.batch_size,
+        device=DEVICE,
         split_dir=args.split_dir,
     )
 

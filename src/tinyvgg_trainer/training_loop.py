@@ -1,4 +1,4 @@
-import os  # ← Изменено: понадобится для num_workers по числу ядер
+from contextlib import nullcontext
 import torch
 from torch import nn, utils, optim
 from tqdm.auto import tqdm
@@ -11,11 +11,13 @@ from torch.cuda.amp import autocast, GradScaler  # ← Изменено: под�
 # ← Изменено: включаем cudnn benchmark (ускоряет свёртки при фиксированном размере входа)
 torch.backends.cudnn.benchmark = True
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = (torch.device("cuda") if torch.cuda.is_available() else
+          torch.device("mps")  if torch.backends.mps.is_available() else
+          torch.device("cpu"))
 
 # ← Изменено: инициализируем scaler один раз (используется для AMP)
-scaler = GradScaler()
-
+use_amp = DEVICE.type == "cuda"
+scaler  = GradScaler(enabled=use_amp)
 
 def train_step(model: nn.Module,
                dataloader: utils.data.DataLoader,
@@ -27,19 +29,21 @@ def train_step(model: nn.Module,
     train_loss, train_acc = 0.0, 0.0
 
     for X, y in dataloader:
-        # ← Изменено: non_blocking=True ускоряет копирование на GPU
-        X, y = X.to(device, non_blocking=True), y.to(device, non_blocking=True)
+        X, y = X.to(device, non_blocking=use_amp), y.to(device, non_blocking=use_amp)
 
         # ← Изменено: используем автоматическую смешанную точность
-        with autocast():
+        with (autocast(dtype=torch.float16) if use_amp else nullcontext()):
             y_pred = model(X)
             loss = loss_fn(y_pred, y)
 
         optimizer.zero_grad(set_to_none=True)
-        # ← Изменено: градиенты через scaler
-        scaler.scale(loss).backward()
-        scaler.step(optimizer)
-        scaler.update()
+        if use_amp:
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            loss.backward()
+            optimizer.step()
 
         train_loss += loss.item()
         preds = y_pred.softmax(dim=1).argmax(dim=1)
@@ -61,11 +65,12 @@ def eval_step(model: nn.Module,
 
     with torch.inference_mode():
         for X, y in dataloader:
-            X, y = X.to(device, non_blocking=True), y.to(device, non_blocking=True)
-            # ← Изменено: также применяем autocast для оценки
-            with autocast():
+            X, y = X.to(device, non_blocking=use_amp), y.to(device, non_blocking=use_amp)
+
+            ctx = autocast(dtype=torch.float16) if use_amp else nullcontext()
+            with ctx:
                 logits = model(X)
-                loss = loss_fn(logits, y)
+                loss   = loss_fn(logits, y)
             loss_sum += loss.item()
             preds = logits.softmax(dim=1).argmax(dim=1)
             acc_sum += (preds == y).float().mean().item()
@@ -89,7 +94,7 @@ def train(model: nn.Module,
     logger = task.get_logger()
 
     # ← Изменено: сокращаем период отчёта до 5 с, чтобы Scalars почаще обновлялись
-    task.set_report_period(5)
+    logger.set_flush_period(5)
 
     results = {
         "train_loss": [], "train_acc": [],
