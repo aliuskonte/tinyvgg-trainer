@@ -38,6 +38,7 @@ def run(
     lr: float,
     seed: int,
     img_size: int,
+    batch_size: int,
     split_dir: str | None = None,
 ) -> None:
     """Запускает полный цикл train / val / test с ClearML трекингом."""
@@ -63,6 +64,7 @@ def run(
         "learning_rate": lr,
         "seed": seed,
         "img_size": img_size,
+        "batch_size": batch_size,
         "split_dir": split_dir or 'data/split',
     })
 
@@ -143,6 +145,10 @@ def main():
         help="Размер стороны входного изображения",
     )
     parser.add_argument(
+            "--batch-size", type=int, default=32,
+            help = "Размер батча для DataLoader-ов",
+    )
+    parser.add_argument(
         "--split-dir", type=str, default=None,
         help="Путь к папке data/split (train/val/test)",
     )
@@ -153,6 +159,7 @@ def main():
         lr=args.lr,
         seed=args.seed,
         img_size=args.img_size,
+        batch_size=args.batch_size,
         split_dir=args.split_dir,
     )
 
