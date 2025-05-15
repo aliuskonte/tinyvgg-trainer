@@ -24,7 +24,9 @@ def get_data_transform(size: tuple = (64, 64)) -> transforms.Compose:
     ])
 
 
-def load_data(split_dir, transform=None):
+def load_data(
+        split_dir: str | None = None,
+        transform=None):
     """
     Загружает датасеты train, val и test из указанной папки split_dir.
     :return: train_data, val_data, test_data
@@ -75,19 +77,22 @@ def create_dataloaders(
         dataset=train_data,
         batch_size=batch_size,
         num_workers=num_workers,
-        shuffle=True
+        shuffle=True,
+        pin_memory=pin_memory
     )
     val_dataloader = DataLoader(
         dataset=val_data,
         batch_size=batch_size,
         num_workers=num_workers,
-        shuffle=False
+        shuffle=False,
+        pin_memory=pin_memory
     )
     test_dataloader = DataLoader(
         dataset=test_data,
         batch_size=batch_size,
         num_workers=num_workers,
-        shuffle=False
+        shuffle=False,
+        pin_memory=pin_memory
     )
     return train_dataloader, val_dataloader, test_dataloader
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 cli.py — единая точка входа для обучения TinyVGG с ClearML интеграцией
 
