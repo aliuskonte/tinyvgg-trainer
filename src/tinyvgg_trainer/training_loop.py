@@ -17,7 +17,7 @@ DEVICE = (torch.device("cuda") if torch.cuda.is_available() else
           torch.device("mps") if torch.backends.mps.is_available() else
           torch.device("cpu"))
 
-# ← Изменено: инициализируем scaler один раз (используется для AMP)
+# Инициализируем scaler один раз (используется для AMP)
 use_amp = DEVICE.type == "cuda"
 scaler = GradScaler(enabled=use_amp)
 
@@ -39,7 +39,7 @@ def train_step(model: nn.Module,
         X, y = X.to(device, non_blocking=use_amp), y.to(device, non_blocking=use_amp)
 
         # ← Изменено: используем автоматическую смешанную точность
-        with (autocast(dtype=torch.float16) if use_amp else nullcontext()):
+        with (autocast(device_type=DEVICE.type, dtype=torch.float16) if use_amp else nullcontext()):
             y_pred = model(X)
             loss = loss_fn(y_pred, y)
 
@@ -77,7 +77,7 @@ def eval_step(model: nn.Module,
         for X, y in dataloader:
             X, y = X.to(device, non_blocking=use_amp), y.to(device, non_blocking=use_amp)
 
-            ctx = autocast(dtype=torch.float16) if use_amp else nullcontext()
+            ctx = autocast(device_type=DEVICE.type, dtype=torch.float16) if use_amp else nullcontext()
             with ctx:
                 logits = model(X)
                 loss = loss_fn(logits, y)
