@@ -68,8 +68,7 @@ def create_dataloaders(
     """
 
     if num_workers is None:
-        # оставляем одно ядро «свободным»
-        num_workers = max(1, multiprocessing.cpu_count() - 1)
+        num_workers = max(1, multiprocessing.cpu_count())
 
     logging.info(f"Number of workers: {num_workers}")
 

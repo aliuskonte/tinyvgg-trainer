@@ -4,17 +4,17 @@ import torch
 from torch import nn, utils, optim
 from tqdm.auto import tqdm
 from clearml import Task
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 from sklearn.metrics import f1_score
 
 # ------------------------------------------------------------------
 #   Глобальные оптимизации вычислений
 # ------------------------------------------------------------------
-# ← Изменено: включаем cudnn benchmark (ускоряет свёртки при фиксированном размере входа)
+# включаем cudnn benchmark (ускоряет свёртки при фиксированном размере входа)
 torch.backends.cudnn.benchmark = True
 
 DEVICE = (torch.device("cuda") if torch.cuda.is_available() else
-          torch.device("mps")  if torch.backends.mps.is_available() else
+          torch.device("mps") if torch.backends.mps.is_available() else
           torch.device("cpu"))
 
 # ← Изменено: инициализируем scaler один раз (используется для AMP)
@@ -26,8 +26,11 @@ def train_step(model: nn.Module,
                dataloader: utils.data.DataLoader,
                loss_fn: nn.Module,
                optimizer: optim.Optimizer,
-               device=DEVICE):
-    """Один проход обучения по dataloader с AMP и non_blocking copy"""
+               device=DEVICE
+               ):
+    """
+    """
+
     model.train()
     train_loss, train_acc = 0.0, 0.0
     all_preds, all_targets = [], []
@@ -96,14 +99,15 @@ def train(model: nn.Module,
           optimizer: optim.Optimizer,
           loss_fn: nn.Module = nn.CrossEntropyLoss(),
           epochs: int = 5,
-          save_path: str = 'saved_weights.pt'):
+          save_path: str = 'saved_weights.pt',
+          patience: int = 3,
+          min_delta: float = 0.0
+          ):
     """Тренировочный цикл с AMP, лучшим чекпоинтом и логированием в ClearML."""
 
     task = Task.current_task()
     logger = task.get_logger()
-
-    # ← Изменено: сокращаем период отчёта до 5 с, чтобы Scalars почаще обновлялись
-    logger.set_flush_period(5)
+    logger.set_flush_period(5) # чтобы Scalars обновлялись почаще
 
     results = {
         "train_loss": [], "train_acc": [],
@@ -112,6 +116,7 @@ def train(model: nn.Module,
     }
 
     best_val = float("inf")
+    no_improve = 0  # НОВОЕ: счётчик эпох без улучшения
 
     for epoch in tqdm(range(epochs), desc="Эпоха"):
         # 1) Обучение
@@ -120,24 +125,39 @@ def train(model: nn.Module,
         val_loss, val_acc, val_preds, val_targets = eval_step(model, val_dataloader, loss_fn)
 
         # 3) Логирование русскими подписями
+        train_f1 = f1_score(train_targets, train_preds, average="macro")
+        val_f1 = f1_score(val_targets, val_preds, average="macro")
+
         logger.report_scalar("Loss",   "обучение",  iteration=epoch, value=train_loss)
         logger.report_scalar("Accuracy", "обучение",  iteration=epoch, value=train_acc)
-        train_f1 = f1_score(train_targets, train_preds, average="macro")
         logger.report_scalar("F1", "обучение",  iteration=epoch, value=train_f1)
 
         logger.report_scalar("Loss", "валидация", iteration=epoch, value=val_loss)
         logger.report_scalar("Accuracy", "валидация", iteration=epoch, value=val_acc)
-        val_f1 = f1_score(val_targets, val_preds, average="macro")
         logger.report_scalar("F1", "валидация", iteration=epoch, value=val_f1)
 
-        # 4) Лучший чекпоинт
-        if val_loss < best_val:
+        # 4) Ранняя остановка и чекпоинт
+        if val_loss + min_delta < best_val:  # считаем улучшение
             best_val = val_loss
+            no_improve = 0  # НОВОЕ: сбрасываем счётчик
             torch.save(model.state_dict(), save_path)
-            logger.report_text(f"Лучшая модель сохранена на эпохе {epoch+1} (val_loss={val_loss:.4f})")
+            logger.report_text(
+                f"Лучшая модель сохранена на эпохе {epoch + 1} (val_loss={val_loss:.4f})"
+            )
+        else:
+            no_improve += 1  # НОВОЕ: увеличиваем счётчик
+            logger.report_text(f"Без улучшений: {no_improve}/{patience}")  # НОВОЕ
 
-        print(f"Эпоха {epoch+1}/{epochs} — Train loss={train_loss:.4f}, acc={train_acc:.4f} | "
-              f"Val loss={val_loss:.4f}, acc={val_acc:.4f}")
+        if no_improve >= patience:  # НОВОЕ: условие ранней остановки
+            logger.report_text(f"Ранняя остановка: нет улучшений {patience} эпох")  # НОВОЕ
+            print(f"\nРанняя остановка на эпохе {epoch + 1}\n")  # НОВОЕ
+            break  # НОВОЕ
+
+        print(
+            f"Эпоха {epoch + 1}/{epochs} — "
+            f"Train loss={train_loss:.4f}, acc={train_acc:.4f} | "
+            f"Val   loss={val_loss:.4f}, acc={val_acc:.4f}"
+        )
 
         results["train_loss"].append(train_loss)
         results["train_acc"].append(train_acc)
@@ -146,11 +166,12 @@ def train(model: nn.Module,
 
     # === Тестирование после обучения ===
     test_loss, test_acc, test_preds, test_targets = eval_step(model, test_dataloader, loss_fn)
-    test_f1 = f1_score(test_targets, test_preds, average="macro")
-    logger.report_scalar("Loss",   "тест", iteration=epochs, value=test_loss)
-    logger.report_scalar("Accuracy", "тест", iteration=epochs, value=test_acc)
-    logger.report_scalar("F1", "тест", iteration=epochs, value=test_f1)
-    logger.report_text(f"Финальный тест — loss={test_loss:.4f}, acc={test_acc:.4f}")
+    test_f1 = f1_score(test_targets, test_preds, average="macro")  # НОВОЕ: F1 на тесте
+
+    logger.report_scalar("Loss", "test", iteration=epoch, value=test_loss)
+    logger.report_scalar("Accuracy", "test", iteration=epoch, value=test_acc)
+    logger.report_scalar("F1", "test", iteration=epoch, value=test_f1)
+    logger.report_text(f"Финальный тест — loss={test_loss:.4f}, acc={test_acc:.4f}, f1={test_f1:.4f}")
 
     results["test_loss"] = test_loss
     results["test_acc"] = test_acc

@@ -123,6 +123,8 @@ def run(
         loss_fn=loss_fn,
         epochs=epochs,
         save_path=str(ckpt_path),
+        patience=3,         # остановимся, если 3 эпох подряд нет улучшений
+        min_delta=1e-4
     )
     duration = timer() - start
     logging.info(f"Обучение завершено за {duration:.2f} с")
