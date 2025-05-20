@@ -31,6 +31,7 @@ setup(
     #   • src/prepare_dataloaders.py
     #   • src/split_dataset.py
     #   • src/training_loop.py
+    #   • src/classify_folder.py
     # -------------------------------------------------------------------------
     package_dir={"": "src"}, # говорит, что все пакеты лежат внутри src/.
     packages=find_packages("src"), # найдёт tinyvgg_trainer и его подпакеты
@@ -39,6 +40,7 @@ setup(
         "prepare_dataloaders",
         "split_dataset",
         "training_loop",
+        "classify_folder",
     ],
     install_requires=[
         "torch>=2.0.0",
@@ -50,6 +52,7 @@ setup(
         "console_scripts": [
             "train-tinyvgg=tinyvgg_trainer.cli:main",
             "split-dataset=tinyvgg_trainer.split_dataset:main",
+            "classify-tinyvgg=tinyvgg_trainer.classify_folder:main",
         ]
     },
     classifiers=[
