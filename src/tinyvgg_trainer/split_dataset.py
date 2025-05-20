@@ -1,7 +1,16 @@
 """
 split_dataset.py — CLI для разбиения датасета на train/val/test.
 Запуск:
-    split-dataset [RAW_DATA_DIR]
+    split-dataset
+
+    # классическое разбиение 80 / 10 / 10
+    split-dataset data_raw
+
+    # своё соотношение train-val-test
+    split-dataset data_raw --ratio 0.7 0.2 0.1
+
+    # только train-val (без test)
+    split-dataset data_raw --ratio 0.85 0.15
 По умолчанию берёт папку data/raw.
 """
 import argparse
@@ -40,11 +49,15 @@ def main():
     parser = argparse.ArgumentParser(
         description="Разбиение data/<raw> на train/val/test"
     )
+    # ← NEW: пользовательское соотношение
     parser.add_argument(
-        'raw_data_dir',
-        nargs='?',
-        default='raw',
-        help='Имя папки внутри data (по умолчанию "raw")'
+        "--ratio",
+        nargs="+",
+        type=str,
+        default=("0.8", "0.1", "0.1"),
+        metavar=("TRAIN", "VAL", "TEST"),
+        help="Соотношение (2 или 3 числа, сумма = 1.0). "
+             'Напр.: --ratio 0.75 0.25  или  --ratio 0.7 0.2 0.1',
     )
     args = parser.parse_args()
     split_dataset(args.raw_data_dir)
