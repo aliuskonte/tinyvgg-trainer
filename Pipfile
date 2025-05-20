@@ -10,9 +10,11 @@ tqdm = "*"
 clearml = "*"
 python-dotenv = "*"
 scikit-learn = "*"
+tinyvgg-trainer = {file = ".", editable = true}
 
 [dev-packages]
 tinyvgg-trainer = {file = ".", editable = true}
+roboflow = "*"
 
 [requires]
 python_version = "3.11"
