@@ -17,7 +17,7 @@ DEVICE = (torch.device("cuda") if torch.cuda.is_available() else
 
 # ← Изменено: инициализируем scaler один раз (используется для AMP)
 use_amp = DEVICE.type == "cuda"
-scaler  = GradScaler(enabled=use_amp)
+scaler = GradScaler(enabled=use_amp)
 
 def train_step(model: nn.Module,
                dataloader: utils.data.DataLoader,
@@ -111,10 +111,10 @@ def train(model: nn.Module,
         val_loss,   val_acc   = eval_step(model, val_dataloader, loss_fn)
 
         # 3) Логирование русскими подписями
-        logger.report_scalar("Потери",   "обучение",  iteration=epoch, value=train_loss)
-        logger.report_scalar("Точность", "обучение",  iteration=epoch, value=train_acc)
-        logger.report_scalar("Потери",   "валидация", iteration=epoch, value=val_loss)
-        logger.report_scalar("Точность", "валидация", iteration=epoch, value=val_acc)
+        logger.report_scalar("Loss",   "обучение",  iteration=epoch, value=train_loss)
+        logger.report_scalar("Accuracy", "обучение",  iteration=epoch, value=train_acc)
+        logger.report_scalar("Loss",   "валидация", iteration=epoch, value=val_loss)
+        logger.report_scalar("Accuracy", "валидация", iteration=epoch, value=val_acc)
 
         # 4) Лучший чекпоинт
         if val_loss < best_val:
@@ -132,11 +132,11 @@ def train(model: nn.Module,
 
     # === Тестирование после обучения ===
     test_loss, test_acc = eval_step(model, test_dataloader, loss_fn)
-    logger.report_scalar("Потери",   "тест", iteration=epochs, value=test_loss)
-    logger.report_scalar("Точность", "тест", iteration=epochs, value=test_acc)
+    logger.report_scalar("Loss",   "тест", iteration=epochs, value=test_loss)
+    logger.report_scalar("Accuracy", "тест", iteration=epochs, value=test_acc)
     logger.report_text(f"Финальный тест — loss={test_loss:.4f}, acc={test_acc:.4f}")
 
     results["test_loss"] = test_loss
-    results["test_acc"]  = test_acc
+    results["test_acc"] = test_acc
 
     return results
