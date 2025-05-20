@@ -19,7 +19,7 @@ from pathlib import Path
 import splitfolders
 
 
-def split_dataset(raw_data_dir: str):
+def split_dataset(raw_data_dir: str, ratio: tuple[float, ...]):
     """
     Разбивает папку data/<raw> на train/val/test в data/split.
     :param raw_data_dir: имя папки с необработанными данными (внутри data/).
@@ -39,28 +39,51 @@ def split_dataset(raw_data_dir: str):
         input=str(path_raw_data),
         output=str(path_split_data),
         seed=1337,
-        ratio=(0.8, 0.1, 0.1),
+        ratio=ratio,
         group_prefix=None
     )
     print("Split completed.")
+
+
+def parse_ratio(values: list[str]) -> tuple[float, ...]:
+    nums = tuple(float(v) for v in values)
+    if len(nums) not in (2, 3):
+        raise argparse.ArgumentTypeError("Нужно передать 2 или 3 числа.")
+    if abs(sum(nums) - 1.0) > 1e-6:
+        raise argparse.ArgumentTypeError("Сумма ratio должна быть 1.0.")
+    return nums
 
 
 def main():
     parser = argparse.ArgumentParser(
         description="Разбиение data/<raw> на train/val/test"
     )
-    # ← NEW: пользовательское соотношение
+    parser.add_argument(
+        'raw_data_dir',
+        nargs='?',
+        default='raw',
+        help='Имя папки внутри data (по умолчанию "raw")'
+    )
     parser.add_argument(
         "--ratio",
         nargs="+",
         type=str,
-        default=("0.8", "0.1", "0.1"),
-        metavar=("TRAIN", "VAL", "TEST"),
+        default=["0.8", "0.1", "0.1"],
+        metavar="RATIO",
         help="Соотношение (2 или 3 числа, сумма = 1.0). "
              'Напр.: --ratio 0.75 0.25  или  --ratio 0.7 0.2 0.1',
     )
     args = parser.parse_args()
-    split_dataset(args.raw_data_dir)
+
+    try:
+        ratio = parse_ratio(args.ratio)
+    except argparse.ArgumentTypeError as e:
+        parser.error(str(e))
+
+    split_dataset(
+        args.raw_data_dir,
+        ratio
+    )
 
 
 if __name__ == "__main__":

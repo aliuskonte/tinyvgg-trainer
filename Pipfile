@@ -9,6 +9,7 @@ torchvision = "*"
 tqdm = "*"
 clearml = "*"
 python-dotenv = "*"
+scikit-learn = "*"
 tinyvgg-trainer = {file = ".", editable = true}
 
 [dev-packages]
