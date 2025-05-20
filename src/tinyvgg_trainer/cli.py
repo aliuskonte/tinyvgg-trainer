@@ -64,6 +64,7 @@ def run(
         task_type=Task.TaskTypes.training,
         reuse_last_task_id=False,
         auto_connect_arg_parser=True,
+        auto_connect_frameworks=True
     )
     # Логи гиперпараметров
     task.connect({

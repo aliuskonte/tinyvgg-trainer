@@ -18,7 +18,7 @@ DEVICE = (torch.device("cuda") if torch.cuda.is_available() else
           torch.device("cpu"))
 
 # Инициализируем scaler один раз (используется для AMP)
-use_amp = DEVICE.type == "cuda"
+use_amp = DEVICE.type == "cuda" # Переменная получает значение True, если устройство - GPU
 scaler = GradScaler(enabled=use_amp)
 
 
@@ -107,7 +107,7 @@ def train(model: nn.Module,
 
     task = Task.current_task()
     logger = task.get_logger()
-    logger.set_flush_period(5) # чтобы Scalars обновлялись почаще
+    logger.set_flush_period(2) # чтобы Scalars обновлялись почаще
 
     results = {
         "train_loss": [], "train_acc": [],
